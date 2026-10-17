@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaBot — Agent de Trading Autonome</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg: #0b0e14;
+            --card-bg: #151924;
+            --card-border: #222938;
+            --green: #00f090;
+            --red: #ff3860;
+            --cyan: #00d2ff;
+            --yellow: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); color: var(--text-main); min-height: 100vh; padding: 1.5rem; }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--card-border);
+            margin-bottom: 1.5rem;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.35rem;
+            font-weight: 800;
+        }
+
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--cyan) 0%, #3b82f6 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .badge-sandbox {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--yellow);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .btn {
+            padding: 0.65rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-toggle { background: var(--cyan); color: #000; }
+        .btn-reset { background: rgba(255, 255, 255, 0.08); color: #fff; border: 1px solid var(--card-border); }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .card-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.4rem; }
+        .card-val { font-size: 1.6rem; font-weight: 800; font-family: var(--font-mono); }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .terminal-box {
+            background: #06080d;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            overflow: hidden;
+            font-family: var(--font-mono);
+        }
+
+        .terminal-header {
+            background: #0f131c;
+            padding: 0.6rem 1rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .terminal-body {
+            padding: 1rem;
+            height: 250px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            line-height: 1.6;
+        }
+
+        .log-entry { margin-bottom: 0.35rem; }
+        .log-time { color: var(--text-muted); margin-right: 0.5rem; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { text-align: left; padding: 0.6rem; color: var(--text-muted); border-bottom: 1px solid var(--card-border); }
+        td { padding: 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.04); font-family: var(--font-mono); }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <header class="navbar">
+        <div class="brand">
+            <div class="brand-icon">🤖</div>
+            <div>
+                <div>AlphaBot <span style="font-size: 0.9rem; font-weight: normal; color: var(--cyan);">Quantitative Agent</span></div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Moteur Autonome de Transactions (Paper Trading)</div>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <span class="badge-sandbox">🛡️ Simulation 100% Sécurisée (Fonds Virtuels)</span>
+            <button class="btn btn-toggle" id="btn-toggle" onclick="toggleBot()">⏸️ Pause</button>
+            <button class="btn btn-reset" onclick="resetWallet()">🔄 Réinitialiser</button>
+        </div>
+    </header>
+
+    <!-- METRICS -->
+    <div class="metrics-grid">
+        <div class="card">
+            <div class="card-label">Capital Virtuel Total</div>
+            <div class="card-val" id="val-equity">10 000,00 $</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">Solde dispo : <span id="val-balance">10 000,00 $</span></div>
+        </div>
+        <div class="card">
+            <div class="card-label">Performance Globale (PnL)</div>
+            <div class="card-val" id="val-pnl" style="color: var(--green);">+0,00 $</div>
+            <div style="font-size: 0.75rem; margin-top: 0.2rem;" id="val-pnl-pct">+0.00%</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Cours BTC/USDT Actuel</div>
+            <div class="card-val" id="val-price" style="color: var(--cyan);">- $</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">Flux direct Binance / Ticker</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Taux de Réussite (Win Rate)</div>
+            <div class="card-val" id="val-winrate">0.0%</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">Trades clôturés : <span id="val-trades-count">0</span></div>
+        </div>
+    </div>
+
+    <!-- MAIN SECTION: CHART & SIGNALS -->
+    <div class="main-grid">
+        <!-- Live Price Chart -->
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                <span style="font-weight: 700; font-size: 0.95rem;">Graphique BTC/USDT & Moyennes Mobiles (EMA 9/21)</span>
+                <span id="bot-status-tag" style="font-size: 0.75rem; font-weight: 700; color: var(--green);">● AGENT AUTONOME ACTIF</span>
+            </div>
+            <div style="height: 280px; position: relative;">
+                <canvas id="priceChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Position & Technical Indicators -->
+        <div class="card">
+            <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 1rem;">Position & Télémétrie</div>
+
+            <!-- Active Position Box -->
+            <div id="position-box" style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">POSITION EN COURS</div>
+                <div id="pos-status" style="font-weight: 700; font-size: 1rem; color: var(--text-muted);">AUCUNE POSITION ACTIVE</div>
+                <div id="pos-details" style="display: none; font-family: var(--font-mono); font-size: 0.8rem; margin-top: 0.5rem; line-height: 1.6;">
+                    Quantité : <span id="pos-qty">0</span> BTC<br>
+                    Prix d'entrée : <span id="pos-entry">0</span> $<br>
+                    Stop-Loss : <span style="color: var(--red);" id="pos-sl">0</span> $<br>
+                    Take-Profit : <span style="color: var(--green);" id="pos-tp">0</span> $
+                </div>
+            </div>
+
+            <!-- Technical Indicators -->
+            <div style="font-size: 0.8rem; font-family: var(--font-mono); line-height: 1.8;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">RSI (14) :</span>
+                    <span id="ind-rsi" style="font-weight: 700;">50.0</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">EMA Rapide (9) :</span>
+                    <span id="ind-ema9" style="font-weight: 700; color: var(--cyan);">-</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">EMA Lente (21) :</span>
+                    <span id="ind-ema21" style="font-weight: 700; color: #a855f7;">-</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Règle de Risque :</span>
+                    <span style="color: var(--green);">SL -1% / TP +2.2%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM SECTION: EXECUTION LOGS & TRADE HISTORY -->
+    <div class="bottom-grid">
+        <!-- Terminal Execution Logs -->
+        <div class="terminal-box">
+            <div class="terminal-header">
+                <span>🤖 LOGS D'EXÉCUTION DES DÉCISIONS EN DIRECT</span>
+                <span>INTERVALLE : 3 SECONDES</span>
+            </div>
+            <div class="terminal-body" id="bot-logs">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- Trades History Table -->
+        <div class="card" style="padding: 1rem; overflow-y: auto; max-height: 290px;">
+            <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.75rem;">Historique des Ordres Exécutés</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Prix Achat / Vente</th>
+                        <th>Raison</th>
+                        <th>Profit Net</th>
+                    </tr>
+                </thead>
+                <tbody id="trade-history-body">
+                    <!-- Injected via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Script -->
+    <script>
+        let priceChart = null;
+
+        async function fetchState() {
+            try {
+                const res = await fetch('/api/state');
+                const data = await res.json();
+                renderUI(data);
+            } catch (e) {
+                console.error("Error fetching bot state:", e);
+            }
+        }
+
+        function renderUI(data) {
+            // Metrics
+            document.getElementById('val-equity').textContent = data.total_equity.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' $';
+            document.getElementById('val-balance').textContent = data.balance_usd.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' $';
+            
+            const pnlVal = document.getElementById('val-pnl');
+            pnlVal.textContent = (data.total_pnl >= 0 ? '+' : '') + data.total_pnl.toFixed(2) + ' $';
+            pnlVal.style.color = data.total_pnl >= 0 ? 'var(--green)' : 'var(--red)';
+
+            const pnlPct = document.getElementById('val-pnl-pct');
+            pnlPct.textContent = (data.total_pnl_pct >= 0 ? '+' : '') + data.total_pnl_pct.toFixed(2) + '%';
+            pnlPct.style.color = data.total_pnl_pct >= 0 ? 'var(--green)' : 'var(--red)';
+
+            document.getElementById('val-price').textContent = data.current_price.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' $';
+            document.getElementById('val-winrate').textContent = data.win_rate + '%';
+            document.getElementById('val-trades-count').textContent = data.total_trades;
+
+            // Status toggle button
+            const btn = document.getElementById('btn-toggle');
+            const statusTag = document.getElementById('bot-status-tag');
+            if (data.is_running) {
+                btn.textContent = '⏸️ Mettre en Pause';
+                btn.style.background = 'var(--cyan)';
+                statusTag.textContent = '● AGENT AUTONOME ACTIF';
+                statusTag.style.color = 'var(--green)';
+            } else {
+                btn.textContent = '▶️ Démarrer l\'Agent';
+                btn.style.background = 'var(--green)';
+                statusTag.textContent = '⏸️ AGENT EN PAUSE';
+                statusTag.style.color = 'var(--yellow)';
+            }
+
+            // Indicators
+            document.getElementById('ind-rsi').textContent = data.indicators.rsi;
+            document.getElementById('ind-ema9').textContent = data.indicators.ema_fast ? data.indicators.ema_fast + ' $' : '-';
+            document.getElementById('ind-ema21').textContent = data.indicators.ema_slow ? data.indicators.ema_slow + ' $' : '-';
+
+            // Active Position Box
+            const pos = data.position;
+            const posStatus = document.getElementById('pos-status');
+            const posDetails = document.getElementById('pos-details');
+            if (pos.active) {
+                posStatus.innerHTML = `<span style="color: var(--green);">🟢 ACHAT ACTIF</span>`;
+                posDetails.style.display = 'block';
+                document.getElementById('pos-qty').textContent = pos.btc_amount;
+                document.getElementById('pos-entry').textContent = pos.entry_price.toLocaleString('fr-FR');
+                document.getElementById('pos-sl').textContent = pos.stop_loss.toLocaleString('fr-FR');
+                document.getElementById('pos-tp').textContent = pos.take_profit.toLocaleString('fr-FR');
+            } else {
+                posStatus.textContent = 'AUCUNE POSITION ACTIVE (En veille)';
+                posDetails.style.display = 'none';
+            }
+
+            // Terminal Logs
+            const logBox = document.getElementById('bot-logs');
+            logBox.innerHTML = '';
+            data.logs.forEach(l => {
+                const div = document.createElement('div');
+                div.className = 'log-entry';
+                let color = '#cbd5e1';
+                if (l.category === 'BUY') color = 'var(--green)';
+                if (l.category === 'SELL') color = 'var(--cyan)';
+                if (l.category === 'STOP') color = 'var(--red)';
+
+                div.innerHTML = `<span class="log-time">[${l.time}]</span> <span style="color: ${color};">${l.message}</span>`;
+                logBox.appendChild(div);
+            });
+
+            // Trade History Table
+            const tbody = document.getElementById('trade-history-body');
+            tbody.innerHTML = '';
+            if (data.trade_history.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Aucune transaction clôturée pour l'instant.</td></tr>`;
+            } else {
+                data.trade_history.forEach(t => {
+                    const row = document.createElement('tr');
+                    const isWin = t.profit_usd >= 0;
+                    row.innerHTML = `
+                        <td>#${t.id}</td>
+                        <td>${Math.round(t.entry_price).toLocaleString()} $ ➔ ${Math.round(t.exit_price).toLocaleString()} $</td>
+                        <td><span style="font-size: 0.75rem; color: var(--text-muted);">${t.reason}</span></td>
+                        <td style="color: ${isWin ? 'var(--green)' : 'var(--red)'}; font-weight: 700;">
+                            ${isWin ? '+' : ''}${t.profit_usd.toFixed(2)} $ (${isWin ? '+' : ''}${t.pnl_pct.toFixed(2)}%)
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            // Update Chart
+            updateChart(data.price_history);
+        }
+
+        function updateChart(prices) {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            const labels = prices.map((_, i) => `${i + 1}`);
+
+            if (priceChart) {
+                priceChart.data.labels = labels;
+                priceChart.data.datasets[0].data = prices;
+                priceChart.update('none');
+            } else {
+                priceChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'BTC/USDT',
+                            data: prices,
+                            borderColor: '#00d2ff',
+                            backgroundColor: 'rgba(0, 210, 255, 0.05)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { display: false },
+                            y: {
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono' } }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        async function toggleBot() {
+            await fetch('/api/toggle', { method: 'POST' });
+            fetchState();
+        }
+
+        async function resetWallet() {
+            if (!confirm("Réinitialiser le capital virtuel à 10 000,00 $ ?")) return;
+            await fetch('/api/reset', { method: 'POST' });
+            fetchState();
+        }
+
+        // Initialize polling every 2 seconds
+        fetchState();
+        setInterval(fetchState, 2000);
+    </script>
+</body>
+</html>
